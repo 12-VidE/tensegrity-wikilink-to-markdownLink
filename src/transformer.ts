@@ -19,7 +19,7 @@ export const WikilinkToMarkdownLinkTransformer: QuartzTransformerPlugin = () => 
       // \|             -> Matches the literal pipe. This ENFORCES that an alias exists.
       // ([^\]]+)       -> Capture Group 2 (Alias): Matches everything after the pipe up to the closing brackets
       // \]\]           -> Matches the literal closing brackets
-      const wikilinkRegex = /(?<!\!)\[\[([^\]|]+)\|([^\]]+)\]\]/g;
+      const wikilinkRegex = /(?<!!)\[\[([^\]|]+)\|([^\]]+)\]\]/g;
 
       // Execute string replacement
       return src.replace(wikilinkRegex, (_match, path, alias) => {
@@ -28,15 +28,6 @@ export const WikilinkToMarkdownLinkTransformer: QuartzTransformerPlugin = () => 
       });
     },
 
-    // NOT needed
-    markdownPlugins() {
-      return [];
-    },
-    htmlPlugins() {
-      return [];
-    },
-    externalResources() {
-      return [];
-    },
+    // NOT needed: markdownPlugins, htmlPlugins, externalResources
   };
 };
