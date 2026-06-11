@@ -1,103 +1,42 @@
-import type { PluggableList, Plugin } from "unified";
-import type { Root as MdastRoot } from "mdast";
-import type { Root as HastRoot, Element } from "hast";
-import type { VFile } from "vfile";
-import remarkGfm from "remark-gfm";
-import rehypeSlug from "rehype-slug";
-import { findAndReplace } from "mdast-util-find-and-replace";
-import { visit } from "unist-util-visit";
 import type { QuartzTransformerPlugin, BuildCtx } from "@quartz-community/types";
-import type { ExampleTransformerOptions } from "./types";
-
-const defaultOptions: ExampleTransformerOptions = {
-  highlightToken: "==",
-  headingClass: "example-plugin-heading",
-  enableGfm: true,
-  addHeadingSlugs: true,
-};
-
-const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
-const remarkHighlightToken = (token: string): Plugin<[], MdastRoot> => {
-  const escapedToken = escapeRegExp(token);
-  const pattern = new RegExp(`${escapedToken}([^\n]+?)${escapedToken}`, "g");
-  return () => (tree: MdastRoot, _file: VFile) => {
-    findAndReplace(tree, [
-      [
-        pattern,
-        (_match: string, value: string) => ({
-          type: "strong",
-          children: [{ type: "text", value }],
-        }),
-      ],
-    ]);
-  };
-};
-
-const rehypeHeadingClass = (className: string): Plugin<[], HastRoot> => {
-  return () => (tree: HastRoot, _file: VFile) => {
-    visit(tree, "element", (node: Element) => {
-      if (!/^h[1-6]$/.test(node.tagName)) {
-        return;
-      }
-
-      const existing = node.properties?.className;
-      const classes: string[] = Array.isArray(existing)
-        ? existing.filter((value): value is string => typeof value === "string")
-        : typeof existing === "string"
-          ? [existing]
-          : [];
-      node.properties = {
-        ...node.properties,
-        className: [...classes, className],
-      };
-    });
-  };
-};
 
 /**
- * Example transformer showing remark/rehype usage and resource injection.
+ * 
+ * @returns Converts Wikilinks INTO Markdown links
+ * No user options needed
  */
-export const ExampleTransformer: QuartzTransformerPlugin<Partial<ExampleTransformerOptions>> = (
-  userOptions?: Partial<ExampleTransformerOptions>,
-) => {
-  const options = { ...defaultOptions, ...userOptions };
+export const WikilinkToMarkdownLinkTransformer: QuartzTransformerPlugin = () => {
+
   return {
-    name: "ExampleTransformer",
+    name: "Wikilink-to-MarkdownLink",
+    
+    // Only needed transformation
     textTransform(_ctx: BuildCtx, src: string) {
-      return src.endsWith("\n") ? src : `${src}\n`;
+      // Regex isolation: Matches [[Path|Alias]]
+      // (?<!\!)        -> Negative lookbehind. Explicitly ignores image embeds like ![[image.png]]
+      // \[\[           -> Matches the literal opening brackets
+      // ([^\]|]+)      -> Capture Group 1 (Path): Matches everything up to the pipe character
+      // \|             -> Matches the literal pipe. This ENFORCES that an alias exists.
+      // ([^\]]+)       -> Capture Group 2 (Alias): Matches everything after the pipe up to the closing brackets
+      // \]\]           -> Matches the literal closing brackets
+      const wikilinkRegex = /(?<!\!)\[\[([^\]|]+)\|([^\]]+)\]\]/g;
+
+      // Execute string replacement
+      return src.replace(wikilinkRegex, (_match, path, alias) => {
+        // Invert into standard markdown link syntax: [Alias](Path)
+        return `[${alias}](${path})`;
+      });
     },
-    markdownPlugins(): PluggableList {
-      const plugins: PluggableList = [remarkHighlightToken(options.highlightToken)];
-      if (options.enableGfm) {
-        plugins.unshift(remarkGfm);
-      }
-      return plugins;
+
+    // NOT needed
+    markdownPlugins() {
+      return [];
     },
-    htmlPlugins(): PluggableList {
-      const plugins: PluggableList = [rehypeHeadingClass(options.headingClass)];
-      if (options.addHeadingSlugs) {
-        plugins.unshift(rehypeSlug);
-      }
-      return plugins;
+    htmlPlugins() {
+      return [];
     },
     externalResources() {
-      return {
-        css: [
-          {
-            content: `.${options.headingClass} { letter-spacing: 0.02em; }`,
-            inline: true,
-          },
-        ],
-        js: [
-          {
-            contentType: "inline",
-            loadTime: "afterDOMReady",
-            script: "document.documentElement.dataset.exampleTransformer = 'true'",
-          },
-        ],
-        additionalHead: [],
-      };
+      return [];
     },
   };
 };
