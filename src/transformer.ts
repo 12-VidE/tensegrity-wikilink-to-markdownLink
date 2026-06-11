@@ -12,14 +12,14 @@ export const WikilinkToMarkdownLinkTransformer: QuartzTransformerPlugin = () => 
     
     // Only needed transformation
     textTransform(_ctx: BuildCtx, src: string) {
-      // Regex isolation: Matches [[Path|Alias]]
+      // Regex isolation: Matches [[Path|Alias w/ $$ ]]
       // (?<!\!)        -> Negative lookbehind. Explicitly ignores image embeds like ![[image.png]]
       // \[\[           -> Matches the literal opening brackets
       // ([^\]|]+)      -> Capture Group 1 (Path): Matches everything up to the pipe character
       // \|             -> Matches the literal pipe. This ENFORCES that an alias exists.
-      // ([^\]]+)       -> Capture Group 2 (Alias): Matches everything after the pipe up to the closing brackets
+      // ([^\]]*?\$[^\]]*?\$)       -> Capture Group 2 (Alias): Matches everything after the pipe up to the closing brackets & latex
       // \]\]           -> Matches the literal closing brackets
-      const wikilinkRegex = /(?<!!)\[\[([^\]|]+)\|([^\]]+)\]\]/g;
+      const wikilinkRegex = /(?<!!)\[\[([^\]|]+)\|([^\]]*?\$[^\]]*?\$)\]\]/g;
 
       // Execute string replacement
       return src.replace(wikilinkRegex, (_match, path, alias) => {

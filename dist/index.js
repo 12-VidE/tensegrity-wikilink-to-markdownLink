@@ -8,7 +8,7 @@ var WikilinkToMarkdownLinkTransformer = () => {
     name: "Wikilink-to-MarkdownLink",
     // Only needed transformation
     textTransform(_ctx, src) {
-      const wikilinkRegex = /(?<!\!)\[\[([^\]|]+)\|([^\]]+)\]\]/g;
+      const wikilinkRegex = /(?<!!)\[\[([^\]|]+)\|([^\]]*?\$[^\]]*?\$)\]\]/g;
       return src.replace(wikilinkRegex, (_match, path, alias) => {
         return `[${alias}](${path})`;
       });
